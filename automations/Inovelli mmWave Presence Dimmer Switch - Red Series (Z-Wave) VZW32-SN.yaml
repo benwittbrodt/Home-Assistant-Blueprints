@@ -1,0 +1,263 @@
+blueprint:
+  name: Inovelli mmWave Presence Dimmer Switch - Red Series (Z-Wave) VZW32-SN
+  description: >
+    Control the Inovelli Red Series 2-in-1 Presence Dimmer (VZW32-SN) via Z-Wave JS.
+    Handles 1-5x taps, hold, and release on Up / Down / Config buttons, plus
+    presence detected / cleared events from the built-in mmWave sensor.
+  domain: automation
+  input:
+    inovelli_switch:
+      name: Inovelli Dimmer
+      description: The LZW32-SN Presence Dimmer.
+      selector:
+        device:
+          integration: zwave_js
+          manufacturer: Inovelli
+          model: VZW32-SN
+    presence_sensor:
+      name: Presence Sensor
+      description: The occupancy/presence binary sensor associated with this switch.
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class: motion
+
+    # ---------- Presence ----------
+    action_presence_detected:
+      name: Presence Detected
+      description: Run when the mmWave sensor detects presence.
+      default: []
+      selector:
+        action: {}
+    action_presence_cleared:
+      name: Presence Cleared (Vacancy)
+      description: Run when the sensor no longer detects presence.
+      default: []
+      selector:
+        action: {}
+
+    # ---------- Up paddle (property_key_name 002) ----------
+    button_a:
+      name: Up - 1 Tap
+      description: 1 tap of the top paddle
+      default: []
+      selector:
+        action: {}
+    button_a2:
+      name: Up - 2 Taps
+      description: 2 taps of the top paddle
+      default: []
+      selector:
+        action: {}
+    button_a3:
+      name: Up - 3 Taps
+      description: 3 taps of the top paddle
+      default: []
+      selector:
+        action: {}
+    button_a4:
+      name: Up - 4 Taps
+      description: 4 taps of the top paddle
+      default: []
+      selector:
+        action: {}
+    button_a5:
+      name: Up - 5 Taps
+      description: 5 taps of the top paddle
+      default: []
+      selector:
+        action: {}
+    button_a_held:
+      name: Up - Held
+      description: Hold the top paddle
+      default: []
+      selector:
+        action: {}
+    button_a_released:
+      name: Up - Released
+      description: Release the top paddle
+      default: []
+      selector:
+        action: {}
+
+    # ---------- Down paddle (property_key_name 001) ----------
+    button_b:
+      name: Down - 1 Tap
+      description: 1 tap of the bottom paddle
+      default: []
+      selector:
+        action: {}
+    button_b2:
+      name: Down - 2 Taps
+      description: 2 taps of the bottom paddle
+      default: []
+      selector:
+        action: {}
+    button_b3:
+      name: Down - 3 Taps
+      description: 3 taps of the bottom paddle
+      default: []
+      selector:
+        action: {}
+    button_b4:
+      name: Down - 4 Taps
+      description: 4 taps of the bottom paddle
+      default: []
+      selector:
+        action: {}
+    button_b5:
+      name: Down - 5 Taps
+      description: 5 taps of the bottom paddle
+      default: []
+      selector:
+        action: {}
+    button_b_held:
+      name: Down - Held
+      description: Hold the bottom paddle
+      default: []
+      selector:
+        action: {}
+    button_b_released:
+      name: Down - Released
+      description: Release the bottom paddle
+      default: []
+      selector:
+        action: {}
+
+    # ---------- Config / small button (property_key_name 003) ----------
+    config_button:
+      name: Config - 1 Tap
+      description: Single tap on the small config button above the LED strip.
+      default: []
+      selector:
+        action: {}
+    config_button_2:
+      name: Config - 2 Taps
+      description: Double tap config
+      default: []
+      selector:
+        action: {}
+    config_button_3:
+      name: Config - 3 Taps
+      description: Triple tap config.
+      default: []
+      selector:
+        action: {}
+    config_button_4:
+      name: Config - 4 Taps
+      description: Four taps on config.
+      default: []
+      selector:
+        action: {}
+    config_button_5:
+      name: Config - 5 Taps
+      description: Five taps on config.
+      default: []
+      selector:
+        action: {}
+    config_button_held:
+      name: Config - Held
+      description: Hold config button. Warning - holding config is used for changing settings so use with caution
+      default: []
+      selector:
+        action: {}
+    config_button_released:
+      name: Config - Released
+      description: Release config button after a brief hold. 
+      default: []
+      selector:
+        action: {}
+
+mode: parallel
+max: 10
+
+variables:
+  device_id: !input inovelli_switch
+
+trigger:
+  - platform: event
+    event_type: zwave_js_value_notification
+    id: button_press
+  - platform: state
+    entity_id: !input presence_sensor
+    from: "off"
+    to: "on"
+    id: presence_on
+  - platform: state
+    entity_id: !input presence_sensor
+    from: "on"
+    to: "off"
+    id: presence_off
+
+action:
+  - choose:
+      # ---------- Presence ----------
+      - conditions:
+          - condition: trigger
+            id: presence_on
+        sequence: !input action_presence_detected
+
+      - conditions:
+          - condition: trigger
+            id: presence_off
+        sequence: !input action_presence_cleared
+
+      # ---------- Buttons ----------
+      - conditions:
+          - condition: trigger
+            id: button_press
+          - condition: template
+            value_template: "{{ trigger.event.data.device_id == device_id }}"
+        sequence:
+          - variables:
+              button_id: "{{ trigger.event.data.property_key_name }}"
+              press_type: "{{ trigger.event.data.value }}"
+          - choose:
+              # Up paddle
+              - conditions: '{{ button_id == "002" and press_type == "KeyPressed" }}'
+                sequence: !input button_a
+              - conditions: '{{ button_id == "002" and press_type == "KeyPressed2x" }}'
+                sequence: !input button_a2
+              - conditions: '{{ button_id == "002" and press_type == "KeyPressed3x" }}'
+                sequence: !input button_a3
+              - conditions: '{{ button_id == "002" and press_type == "KeyPressed4x" }}'
+                sequence: !input button_a4
+              - conditions: '{{ button_id == "002" and press_type == "KeyPressed5x" }}'
+                sequence: !input button_a5
+              - conditions: '{{ button_id == "002" and press_type == "KeyHeldDown" }}'
+                sequence: !input button_a_held
+              - conditions: '{{ button_id == "002" and press_type == "KeyReleased" }}'
+                sequence: !input button_a_released
+
+              # Down paddle
+              - conditions: '{{ button_id == "001" and press_type == "KeyPressed" }}'
+                sequence: !input button_b
+              - conditions: '{{ button_id == "001" and press_type == "KeyPressed2x" }}'
+                sequence: !input button_b2
+              - conditions: '{{ button_id == "001" and press_type == "KeyPressed3x" }}'
+                sequence: !input button_b3
+              - conditions: '{{ button_id == "001" and press_type == "KeyPressed4x" }}'
+                sequence: !input button_b4
+              - conditions: '{{ button_id == "001" and press_type == "KeyPressed5x" }}'
+                sequence: !input button_b5
+              - conditions: '{{ button_id == "001" and press_type == "KeyHeldDown" }}'
+                sequence: !input button_b_held
+              - conditions: '{{ button_id == "001" and press_type == "KeyReleased" }}'
+                sequence: !input button_b_released
+
+              # Config button
+              - conditions: '{{ button_id == "003" and press_type == "KeyPressed" }}'
+                sequence: !input config_button
+              - conditions: '{{ button_id == "003" and press_type == "KeyPressed2x" }}'
+                sequence: !input config_button_2
+              - conditions: '{{ button_id == "003" and press_type == "KeyPressed3x" }}'
+                sequence: !input config_button_3
+              - conditions: '{{ button_id == "003" and press_type == "KeyPressed4x" }}'
+                sequence: !input config_button_4
+              - conditions: '{{ button_id == "003" and press_type == "KeyPressed5x" }}'
+                sequence: !input config_button_5
+              - conditions: '{{ button_id == "003" and press_type == "KeyHeldDown" }}'
+                sequence: !input config_button_held
+              - conditions: '{{ button_id == "003" and press_type == "KeyReleased" }}'
+                sequence: !input config_button_released
